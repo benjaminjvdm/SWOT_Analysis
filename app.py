@@ -4,26 +4,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 import requests
 
-# --- Sidebar: About the Author ---
-with st.sidebar:
-    st.subheader("About the Author")
+st.sidebar.subheader("About the Author")
 
-    # Fetch image
-    image_url = "https://avatars.githubusercontent.com/u/97449931?v=4"
+image_url = "https://github.com/benjaminjvdm/streamlit-author/blob/main/Untitled%20design(1)(1).png?raw=true"
+try:
     response = requests.get(image_url)
+    print(f"Image URL: {image_url}")
+    response.raise_for_status()
+    image = response.content
+    st.sidebar.image(image, caption="Moon Benjee (문벤지)")
+except requests.exceptions.RequestException as e:
+    st.sidebar.error(f"Error loading image: {e}")
 
-    if response.status_code == 200:
-        image = response.content
-        st.image(image, caption="Moon Benjee (문벤지)", use_container_width=True)  # Display image with caption
-    else:
-        st.write("Image not found.")
-
-    st.markdown(
-        """
-        This app was created by **Moon Benjee (문벤지)**. 
-        You can connect with me on: [LinkedIn](https://www.linkedin.com/in/benjaminjvdm/)
-        """
-    )
+st.sidebar.markdown(
+    """
+    This app was Built with ❤️ by **Benjee(문벤지)**.
+    You can connect with me on: [LinkedIn](https://www.linkedin.com/in/benjaminjvdm/)
+    """
+)
 
 st.title("SWOT Analysis Radar Chart")
 st.header("Enter SWOT Factors and Importance")
