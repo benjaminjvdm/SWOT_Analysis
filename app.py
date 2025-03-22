@@ -24,6 +24,7 @@ st.sidebar.markdown(
 )
 
 st.title("SWOT Analysis Radar Chart")
+st.set_page_config(page_title="SWOT Analysis Radar Chart", page_icon="💪")
 st.header("Enter SWOT Factors and Importance")
 
 with st.form("swot_form"):
