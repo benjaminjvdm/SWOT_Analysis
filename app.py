@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import requests
 
+st.set_page_config(page_title="SWOT Analysis Radar Chart", page_icon="💪")
+
 st.sidebar.subheader("About the Author")
 
 image_url = "https://github.com/benjaminjvdm/streamlit-author/blob/main/Untitled%20design(1)(1).png?raw=true"
@@ -24,7 +26,6 @@ st.sidebar.markdown(
 )
 
 st.title("SWOT Analysis Radar Chart")
-st.set_page_config(page_title="SWOT Analysis Radar Chart", page_icon="💪")
 st.header("Enter SWOT Factors and Importance")
 
 with st.form("swot_form"):
