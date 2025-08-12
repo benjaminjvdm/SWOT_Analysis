@@ -1,96 +1,147 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
-import requests
+import plotly.graph_objects as go
+import io
 
-st.set_page_config(page_title="SWOT Analysis Radar Chart", page_icon="💪")
+def initialize_session_state():
+    """Initializes session state variables if they don't exist."""
+    if "factors" not in st.session_state:
+        st.session_state.factors = {
+            "Strengths": [],
+            "Weaknesses": [],
+            "Opportunities": [],
+            "Threats": [],
+        }
 
-st.sidebar.subheader("About the Author")
+def factor_input_ui(category):
+    """Renders the UI for adding and managing factors for a category."""
+    st.subheader(category)
 
-image_url = "https://github.com/benjaminjvdm/streamlit-author/blob/main/Untitled%20design(1)(1).png?raw=true"
-try:
-    response = requests.get(image_url)
-    print(f"Image URL: {image_url}")
-    response.raise_for_status()
-    image = response.content
-    st.sidebar.image(image, caption="Moon Benjee (문벤지)")
-except requests.exceptions.RequestException as e:
-    st.sidebar.error(f"Error loading image: {e}")
+    # Input for new factor
+    new_factor = st.text_input(f"Add a new factor for {category}", key=f"new_{category}")
+    if st.button(f"Add Factor", key=f"add_{category}"):
+        if new_factor:
+            st.session_state.factors[category].append({"name": new_factor, "importance": 1})
+            # Clear the input box after adding
+            st.rerun()
 
-st.sidebar.markdown(
-    """
-    This app was Built with ❤️ by **Benjee(문벤지)**.
-    You can connect with me on: [LinkedIn](https://www.linkedin.com/in/benjaminjvdm/)
-    """
-)
+    # Display existing factors
+    for i, factor in enumerate(st.session_state.factors[category]):
+        col1, col2, col3 = st.columns([3, 2, 1])
+        with col1:
+            st.text(factor["name"])
+        with col2:
+            st.session_state.factors[category][i]["importance"] = st.slider(
+                f"Importance", 1, 3, factor["importance"], key=f"{category}_{i}_slider"
+            )
+        with col3:
+            if st.button("Remove", key=f"remove_{category}_{i}"):
+                st.session_state.factors[category].pop(i)
+                st.rerun()
 
-st.title("SWOT Analysis Radar Chart")
-st.header("Enter SWOT Factors and Importance")
+def calculate_average_importance(factors):
+    """Calculates the average importance for each SWOT category."""
+    avg_values = {}
+    for category, items in factors.items():
+        if items:
+            avg_values[category] = np.mean([item["importance"] for item in items])
+        else:
+            avg_values[category] = 0
+    return avg_values
 
-with st.form("swot_form"):
-    st.write("Importance levels: Normal (1), High (2), Highest (3)")
+def create_radar_chart(avg_values):
+    """Creates and returns a Plotly radar chart."""
+    categories = list(avg_values.keys())
+    values = list(avg_values.values())
 
-    # Function to get factors and importance values
-    def get_factors_and_importance(category_name):
-        factors_input = st.text_input(f"{category_name} (comma-separated):")
-        factors_list = [f.strip() for f in factors_input.split(",") if f.strip()]
-        importance_values = []
-        for i, factor in enumerate(factors_list):
-            importance = st.number_input(f"Importance of '{factor}':", min_value=1, max_value=3, value=2, key=f"{category_name}_{i}") #Unique key
-            importance_values.append(importance)
-        return factors_list, importance_values
+    fig = go.Figure()
 
-    # Get input for each category
-    strengths_list, strengths_importance = get_factors_and_importance("Strengths")
-    weaknesses_list, weaknesses_importance = get_factors_and_importance("Weaknesses")
-    opportunities_list, opportunities_importance = get_factors_and_importance("Opportunities")
-    threats_list, threats_importance = get_factors_and_importance("Threats")
+    fig.add_trace(go.Scatterpolar(
+        r=values + values[:1],
+        theta=categories + categories[:1],
+        fill='toself',
+        name='SWOT Analysis'
+    ))
 
-    submitted = st.form_submit_button("Generate Radar Chart")
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 3]
+            )),
+        showlegend=False,
+        title="SWOT Analysis Radar Chart"
+    )
+    return fig
 
+def main():
+    """The main function that runs the Streamlit application."""
+    st.set_page_config(page_title="SWOT Analysis Radar Chart", page_icon="💪", layout="wide")
 
-if submitted:
-    # Data preparation
-    categories = ['Strengths', 'Weaknesses', 'Opportunities', 'Threats']
-    category_values = {
-        'Strengths': strengths_importance,
-        'Weaknesses': weaknesses_importance,
-        'Opportunities': opportunities_importance,
-        'Threats': threats_importance
-    }
+    initialize_session_state()
 
-    # Calculate average importance for each category
-    avg_values = [np.mean(v) if v else 0 for v in category_values.values()]
+    # --- Sidebar ---
+    st.sidebar.subheader("About the Author")
+    st.sidebar.image("assets/author_image.png", caption="Moon Benjee (문벤지)")
+    st.sidebar.markdown(
+        """
+        This app was Built with ❤️ by **Benjee(문벤지)**.
+        You can connect with me on: [LinkedIn](https://www.linkedin.com/in/benjaminjvdm/)
+        """
+    )
 
-    # Optimized Plot Settings
-    label_offset = 0.2
-    label_size = 10  # Explicitly define label_size here
+    # --- Main Content ---
+    st.title("SWOT Analysis Radar Chart")
+    st.write("Add factors for each category and set their importance from 1 (Normal) to 3 (Highest).")
 
-    # Plot radar chart
-    angles = np.linspace(0, 2 * np.pi, len(categories), endpoint=False).tolist()
-    avg_values += avg_values[:1]
-    angles += angles[:1]
-
-    fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(111, polar=True)
-    ax.set_rgrids([])  
-    ax.set_xticks([])
-
-    ax.plot(angles, avg_values, 'o-', linewidth=2, color='blue')
-    ax.fill(angles, avg_values, alpha=0.25, color='lightblue')
-
-    ax.grid(alpha=0.2)  
-    plt.ylim(0, 3.5)
-
-    plt.title("SWOT Analysis", size=16)
-
-    # Display category labels and average values on the points themselves
+    # --- Factor Input ---
+    cols = st.columns(4)
+    categories = ["Strengths", "Weaknesses", "Opportunities", "Threats"]
     for i, category in enumerate(categories):
-        angle = angles[i]
-        avg_importance = avg_values[i]
-        ax.text(angle, avg_importance + 0.2, f"{category} ({avg_importance:.1f})", 
-                ha='center', va='center', size=label_size, fontweight='bold')
+        with cols[i]:
+            factor_input_ui(category)
 
-    # Display the chart
-    st.pyplot(fig)
+    # --- Chart and Export ---
+    st.header("Analysis Visualization")
+
+    avg_values = calculate_average_importance(st.session_state.factors)
+
+    if any(avg_values.values()):
+        fig = create_radar_chart(avg_values)
+        st.plotly_chart(fig, use_container_width=True)
+
+        # --- Exporting ---
+        st.subheader("Export Your Analysis")
+
+        # Export Chart
+        img_bytes = fig.to_image(format="png", scale=2)
+        st.download_button(
+            label="Download Chart as PNG",
+            data=img_bytes,
+            file_name="swot_radar_chart.png",
+            mime="image/png"
+        )
+
+        # Export Data
+        all_factors = []
+        for category, items in st.session_state.factors.items():
+            for item in items:
+                all_factors.append([category, item['name'], item['importance']])
+
+        if all_factors:
+            df = pd.DataFrame(all_factors, columns=["Category", "Factor", "Importance"])
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Download Data as CSV",
+                data=csv,
+                file_name="swot_analysis_data.csv",
+                mime="text/csv",
+            )
+
+    else:
+        st.info("Add some factors to see the chart.")
+
+
+if __name__ == "__main__":
+    main()
